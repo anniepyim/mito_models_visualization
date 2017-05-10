@@ -51,7 +51,7 @@ function initVis(){
     var pack = d3.layout.pack()
         .size([diameter - 4, diameter - 4])
         .children(function(d){ return d.genes;})
-        .value(function(d) { return Math.abs(d.Log2FoldChange); })
+        .value(function(d) { return Math.abs(d.log2); })
         .sort(function(a,b){
             
             if(a.genes && b.genes){
@@ -99,16 +99,16 @@ function initVis(){
                 .attr('transform', function(d){ return 'translate(' + d.x + ',' + d.y + ')'; }),
             innerR = d.r * 0.8,
             arr = [ 
-                { stroke: stroke('up'), color: fill('up'), Log2FoldChange: d.up.length}, 
-                { stroke: stroke('none'), color: fill('none'), Log2FoldChange: d.none.length }, 
-                { stroke: stroke('down'), color: fill('down'), Log2FoldChange: d.down.length }
+                { stroke: stroke('up'), color: fill('up'), log2: d.up.length}, 
+                { stroke: stroke('none'), color: fill('none'), log2: d.none.length }, 
+                { stroke: stroke('down'), color: fill('down'), log2: d.down.length }
             ],
             arc = d3.svg.arc()
                 .innerRadius(innerR)
                 .outerRadius(d.r),
             pie = d3.layout.pie()
                 .sort(null)
-                .value(function(d) { return d.Log2FoldChange; });
+                .value(function(d) { return d.log2; });
         
         // Add background circle circle to hide links and listen to events
         g.selectAll('circle').data([d])
@@ -148,7 +148,7 @@ function initVis(){
             .append('textPath')
                 .attr('xlink:href', function(d){ return '#txtPath' + d.id; })
 	           .attr('startOffset', '50%')	
-                .text(function(d) { return d.Process; });*/
+                .text(function(d) { return d.process; });*/
         
         
         handleGenes.call(this, d);
@@ -261,7 +261,7 @@ function initVis(){
     function appendTSpan(d){
         
         var txt = d3.select(this),
-            words = d.Process.split(' '),
+            words = d.process.split(' '),
             y = 0;
         
         words.unshift('+');
@@ -282,7 +282,7 @@ function initVis(){
     
     
         
-    //.text(function(d){ return d.Process;});
+    //.text(function(d){ return d.process;});
     
     
     /*var div = d3.select(selector)
@@ -471,7 +471,7 @@ function search(str){
     str = str.toLowerCase();
     
     var matchingGenes = d3.selectAll('.gene')
-                        .filter(function(d){ return d.Name.toLocaleLowerCase().match(str); })
+                        .filter(function(d){ return d.gene.toLocaleLowerCase().match(str); })
                         .classed('search', true);
     
     matchingGenes.each(function(d){

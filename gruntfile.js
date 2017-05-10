@@ -110,7 +110,7 @@ module.exports = function(grunt) {
     });
     
     //Tasks
-    grunt.registerTask('dist', ['clean', 'jshint', 'simplemocha', 'handlebars', 'copy', 'browserify', 'stylus', 'uglify']);
+    grunt.registerTask('dist', ['jshint', 'simplemocha', 'handlebars', 'copy', 'browserify', 'stylus', 'uglify']);
     
     grunt.registerTask('serve', ['http-server']);
     
