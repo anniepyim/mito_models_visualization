@@ -23,7 +23,7 @@ $id = $_GET['id'];
     
     <body></body>
     <!-- App Script  -->
-    <script data-my_var_1="<?php echo $id; ?>" data-my_var_2="../data/links.json" src="js/App.js"></script>
+    <script data-my_var_1="<?php echo $id; ?>" data-my_var_2="./data/links.json" src="js/App.js"></script>
     <script>
         
         

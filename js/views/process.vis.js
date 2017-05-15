@@ -22,7 +22,7 @@ var selector,
     highlightColor = '#FFFBCC',
     mutationColor = '#2c3e50',
     templates = require('../templates.js'),
-    prPadding = 1.7,
+    prPadding = 1.6,
     clickEvent = {target: null, holdClick: false},
     tipTemplate = require('../templates').tooltip;
 
@@ -62,19 +62,27 @@ function initVis(){
         })
         .nodes(root);
     
-    // Use all space available while keeping padding between elements
-    var pxMin = _.min(data.processes, function(d){return d.x;}),
-        pyMin = _.min(data.processes, function(d){return d.y;}),
-        xMin = - (pxMin.x * prPadding) + pxMin.r,
-        yMin = - (pyMin.y * prPadding) + pyMin.r;
-    
     _.each(data.processes, function(d){
         d.original = {};
         d.original.x = d.x;
         d.original.y = d.y;
+        d.xmin = (d.x * prPadding) - d.r;
+        d.ymin = (d.y * prPadding) - d.r;
+    });
+    
+    // Use all space available while keeping padding between elements
+    var pxMin = _.min(data.processes, function(d){return d.xmin;}),
+        pyMin = _.min(data.processes, function(d){return d.ymin;}),
+        xMin = - (pxMin.x * prPadding) + pxMin.r,
+        yMin = - (pyMin.y * prPadding) + pyMin.r;
+        
+    
+    _.each(data.processes, function(d){
         d.x = (d.x * prPadding) + xMin;
         d.y = (d.y * prPadding) + yMin;
     });
+    
+    console.log(data.processes);
     
     _.each(data.nodes, function(d){
         d.x = d.x + (d.parent.x - d.parent.original.x);
@@ -194,7 +202,7 @@ function initVis(){
      * Create process Annotations
      *****************************/
     
-    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([8,12]);
+    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([6,11]);
     
     annotations = svg.selectAll('.node')
                         .data(data.processes);
