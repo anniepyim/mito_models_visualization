@@ -9,11 +9,11 @@ function dataFormatter(nodes, links){
     var data = {};
     
     data.nodes = _.map(nodes, function(n){
-        n.id = _.uniqueId(n.Name + '_');
+        n.id = _.uniqueId(n.gene + '_');
         return n;
     });
     
-    data.processes = _.groupBy(data.nodes, function(n){ return n.Process; });
+    data.processes = _.groupBy(data.nodes, function(n){ return n.process; });
     data.processes = _.map(data.processes, function(genes, key){
     
         var process = {};
@@ -24,9 +24,9 @@ function dataFormatter(nodes, links){
         process.down = _.chain(genes).filter(regulation.isDownRegulated).map( function(d){ return _.extend(d, {'regulated': 'down'}); } ).value();
         process.none = _.chain(genes).filter(regulation.isNotRegulated).map( function(d){ return _.extend(d, {'regulated': 'none'}); } ).value();
         
-        process.Process = key;
+        process.process = key;
         process.genes = genes;
-        process.Log2FoldChange = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.Log2FoldChange); }, 0);
+        process.log2 = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.log2); }, 0);
         process.regulated = process.up.length + process.down.length;
         
         //Assign genes a parent
@@ -60,15 +60,15 @@ function dataFormatter(nodes, links){
     // (many nodes can have same name)
     _.each(data.nodes, function(n){ 
         
-        if(_.isUndefined(nodeDic[n.Name])){
-            nodeDic[n.Name] = [];
+        if(_.isUndefined(nodeDic[n.gene])){
+            nodeDic[n.gene] = [];
         }
-        nodeDic[n.Name].push(n);
+        nodeDic[n.gene].push(n);
     });
     
     // Create process dictionary
     _.each(data.processes, function(n){
-        processDic[n.Process] = n;
+        processDic[n.process] = n;
     });
     
     _.each(links, function(l){
@@ -85,8 +85,8 @@ function dataFormatter(nodes, links){
         
             _.each(targets, function(t){
             
-                var p1 = processDic[s.Process],
-                    p2 = processDic[t.Process];
+                var p1 = processDic[s.process],
+                    p2 = processDic[t.process];
         
                 // Only take into account interactions from different processes
                 if(p1.id === p2.id) return;
@@ -146,11 +146,11 @@ function geneRegulation(log2Limit, pvalLimit){
     pvalLimit = (pvalLimit !== undefined) ? pvalLimit :  0.05;
 
     function isUpRegulated(g){
-        return g.Log2FoldChange > log2Limit || (g.Log2FoldChange > 0 && g['p-value'] < 0.05);
+        return g.log2 > log2Limit || (g.log2 > 0 && g.pvalue < 0.05);
     }
 
     function isDownRegulated(g){
-        return g.Log2FoldChange < - log2Limit || (g.Log2FoldChange < 0 && g['p-value'] < 0.05);
+        return g.log2 < - log2Limit || (g.log2 < 0 && g.pvalue < 0.05);
     }
 
     function isNotRegulated(g){
@@ -186,6 +186,15 @@ var d3 = require('d3');
 //Public members
 var App = {};
 
+var this_js_script = $('script[src*=App]');
+    var my_var_1 = this_js_script.attr('data-my_var_1');   
+        if (typeof my_var_1 === "undefined" ) 
+        {
+                var my_var_1 = 'some_default_value';
+        }
+    var my_var_2 = this_js_script.attr('data-my_var_2'); 
+//end
+
 App.init = function(options){ 
     
     
@@ -204,12 +213,11 @@ App.init = function(options){
     
     App.views.vis.selector('#vis');
     
-    
-    d3.json('../data/mouse-21.3.json', function(error, nodes) {
-        if (error) return console.warn(error);
+    d3.json("./data/" + my_var_1 + ".json", function(error, nodes) {
+        if (error) return console.warn(my_var_1 + ".json");
         
-        d3.json('../data/links.json', function(error, links) {
-            if (error) return console.warn(error);
+        d3.json(my_var_2, function(error, links) {
+            if (error) return console.warn(my_var_2);
             
             App.views.vis.init(nodes, links);
         });
@@ -227,16 +235,16 @@ Handlebars = glob.Handlebars || require('handlebars');
 this["Templates"] = this["Templates"] || {};
 
 this["Templates"]["main"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    return "<!-- Page Content -->\n<div class=\"container main\">\n    \n    \n    <div class=\"row\">\n        \n        <div class=\"col-md-3\">\n            \n            <div class=\"row\">\n            \n                <div class=\"col-md-12 title\" style=\"margin-top:20px;\">Find a Gene</div>\n            \n                <div class=\"col-md-12\" style=\"margin-top:10px;\">\n                    <input type=\"text\" class=\"form-control\" placeholder=\"Search gene by name...\">\n                    <ul class=\"list-group results\"></ul>\n                </div>\n\n\n                <div class=\"col-md-12 miniTitle\" style=\"margin-top:20px;\">\n                    Legend\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Color</strong> shows gene regulation\n                </div>\n\n                <div class=\"col-md-6\">\n                    <svg width=\"120\" height=\"40\">\n                        <rect x=\"0\" y=\"10\" width=\"38\" height=\"7\" fill=\"#2171b5\"></rect>\n                        <rect x=\"38\" y=\"10\" width=\"38\" height=\"7\" fill=\"#BECCAE\"></rect>\n                        <rect x=\"76\" y=\"10\" width=\"38\" height=\"7\" fill=\"#C72D0A\"></rect>\n\n                        <text x=\"10\" y=\"26\" class=\"legendText\">Up</text>\n                        <text x=\"44\" y=\"26\" class=\"legendText\">None</text>\n                        <text x=\"80\" y=\"26\" class=\"legendText\">Down</text>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Dark Borders</strong> show mutations\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"120\" height=\"40\">\n                        <circle cx=\"58\" cy=\"20\" fill=\"none\" r=\"18\" stroke-width=\"1.2\" stroke=\"#2c3e50\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Size</strong> shows Log2 fold change\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"120\" height=\"40\">\n                        <circle cx=\"58\" cy=\"20\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"18\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                        <circle cx=\"58\" cy=\"31\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"6\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-12\">\n                    <hr>\n                </div>\n            \n            </div>\n            \n            \n            <div class=\"row tip\" style=\"margin-top:20px;\">\n            </div>\n            \n            \n        </div>\n        \n        <div class=\"col-md-9\">\n            <div id=\"vis\" class=\"vis\"></div>\n        </div> \n    </div>\n    \n</div>\n\n";
+    return "<!-- Page Content -->\n<div class=\"container main\">\n    \n    \n    <div class=\"row\">\n        \n        <div class=\"col-md-2\">\n            \n            <div class=\"row\">\n            \n                <div class=\"col-md-12 title\" style=\"margin-top:20px;\">Find a Gene</div>\n            \n                <div class=\"col-md-12\" style=\"margin-top:10px;\">\n                    <input type=\"text\" class=\"form-control\" placeholder=\"Search gene by name...\" style=\"font-size:11px\">\n                    <ul class=\"list-group results\"></ul>\n                </div>\n\n\n                <div class=\"col-md-12 miniTitle\" style=\"margin-top:20px;\">\n                    Legend\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Color</strong> shows gene regulation\n                </div>\n\n                <div class=\"col-md-6\">\n                    <svg width=\"70\" height=\"65\">\n                        <rect x=\"0\" y=\"10\" width=\"25\" height=\"7\" fill=\"#2171b5\"></rect>\n                        <rect x=\"0\" y=\"25\" width=\"25\" height=\"7\" fill=\"#BECCAE\"></rect>\n                        <rect x=\"0\" y=\"40\" width=\"25\" height=\"7\" fill=\"#C72D0A\"></rect>\n\n                        <text x=\"30\" y=\"17\" class=\"legendText\">Up</text>\n                        <text x=\"30\" y=\"32\" class=\"legendText\">None</text>\n                        <text x=\"30\" y=\"48\" class=\"legendText\">Down</text>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\" style=\"padding-right:0px\">\n                    <strong>Dark Borders</strong> show mutations\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"70\" height=\"50\">\n                        <circle cx=\"25\" cy=\"18\" fill=\"none\" r=\"16\" stroke-width=\"1.2\" stroke=\"#2c3e50\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Size</strong> shows Log2 fold change\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"70\" height=\"50\">\n                        <circle cx=\"25\" cy=\"20\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"16\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                        <circle cx=\"25\" cy=\"30\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"6\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-12\">\n                    <hr>\n                </div>\n            \n            </div>\n            \n            \n            <div class=\"row tip\" style=\"margin-top:20px;\">\n            </div>\n            \n            \n        </div>\n        \n        <div class=\"col-md-10\">\n            <div id=\"vis\" class=\"vis\"></div>\n        </div> \n    </div>\n    \n</div>\n\n";
 },"useData":true});
 
 this["Templates"]["result"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
     var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
 
   return "<li class=\"list-group-item\"><span class=\"title\">"
-    + alias4(((helper = (helper = helpers.Name || (depth0 != null ? depth0.Name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Name","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.gene || (depth0 != null ? depth0.gene : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene","hash":{},"data":data}) : helper)))
     + "</span><br><span>"
-    + alias4(((helper = (helper = helpers.Process || (depth0 != null ? depth0.Process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Process","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.process || (depth0 != null ? depth0.process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"process","hash":{},"data":data}) : helper)))
     + "</span></li>";
 },"useData":true});
 
@@ -244,15 +252,15 @@ this["Templates"]["tooltip"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"m
     var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
 
   return "<div class=\"col-md-12 title\">"
-    + alias4(((helper = (helper = helpers.Name || (depth0 != null ? depth0.Name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Name","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.gene || (depth0 != null ? depth0.gene : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-12 process\">"
-    + alias4(((helper = (helper = helpers.Process || (depth0 != null ? depth0.Process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Process","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.process || (depth0 != null ? depth0.process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"process","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-12 function\">"
-    + alias4(((helper = (helper = helpers.Function || (depth0 != null ? depth0.Function : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Function","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.gene_function || (depth0 != null ? depth0.gene_function : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene_function","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Pvalue\n</div>\n                \n<div class=\"col-md-6\">"
-    + alias4(((helper = (helper = helpers["p-value"] || (depth0 != null ? depth0["p-value"] : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"p-value","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.pvalue || (depth0 != null ? depth0.pvalue : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"pvalue","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Log2 fold change\n</div>\n                \n<div class=\"col-md-6\">"
-    + alias4(((helper = (helper = helpers.Log2FoldChange || (depth0 != null ? depth0.Log2FoldChange : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Log2FoldChange","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.log2 || (depth0 != null ? depth0.log2 : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"log2","hash":{},"data":data}) : helper)))
     + "</div>";
 },"useData":true});
 
@@ -316,7 +324,7 @@ module.exports = Backbone.View.extend({
             view = this;
 
         results = _.chain(results)
-                .sortBy('Name') //function(r){ return r.Name + r.Process; }
+                .sortBy('gene') //function(r){ return r.gene + r.process; }
                 .filter(function(r, i){ return i < 5; })
                 .value();
             
@@ -358,7 +366,7 @@ var selector,
     highlightColor = '#FFFBCC',
     mutationColor = '#2c3e50',
     templates = require('../templates.js'),
-    prPadding = 1.7,
+    prPadding = 1.6,
     clickEvent = {target: null, holdClick: false},
     tipTemplate = require('../templates').tooltip;
 
@@ -387,7 +395,7 @@ function initVis(){
     var pack = d3.layout.pack()
         .size([diameter - 4, diameter - 4])
         .children(function(d){ return d.genes;})
-        .value(function(d) { return Math.abs(d.Log2FoldChange); })
+        .value(function(d) { return Math.abs(d.log2); })
         .sort(function(a,b){
             
             if(a.genes && b.genes){
@@ -398,19 +406,27 @@ function initVis(){
         })
         .nodes(root);
     
-    // Use all space available while keeping padding between elements
-    var pxMin = _.min(data.processes, function(d){return d.x;}),
-        pyMin = _.min(data.processes, function(d){return d.y;}),
-        xMin = - (pxMin.x * prPadding) + pxMin.r,
-        yMin = - (pyMin.y * prPadding) + pyMin.r;
-    
     _.each(data.processes, function(d){
         d.original = {};
         d.original.x = d.x;
         d.original.y = d.y;
+        d.xmin = (d.x * prPadding) - d.r;
+        d.ymin = (d.y * prPadding) - d.r;
+    });
+    
+    // Use all space available while keeping padding between elements
+    var pxMin = _.min(data.processes, function(d){return d.xmin;}),
+        pyMin = _.min(data.processes, function(d){return d.ymin;}),
+        xMin = - (pxMin.x * prPadding) + pxMin.r,
+        yMin = - (pyMin.y * prPadding) + pyMin.r;
+        
+    
+    _.each(data.processes, function(d){
         d.x = (d.x * prPadding) + xMin;
         d.y = (d.y * prPadding) + yMin;
     });
+    
+    console.log(data.processes);
     
     _.each(data.nodes, function(d){
         d.x = d.x + (d.parent.x - d.parent.original.x);
@@ -435,16 +451,16 @@ function initVis(){
                 .attr('transform', function(d){ return 'translate(' + d.x + ',' + d.y + ')'; }),
             innerR = d.r * 0.8,
             arr = [ 
-                { stroke: stroke('up'), color: fill('up'), Log2FoldChange: d.up.length}, 
-                { stroke: stroke('none'), color: fill('none'), Log2FoldChange: d.none.length }, 
-                { stroke: stroke('down'), color: fill('down'), Log2FoldChange: d.down.length }
+                { stroke: stroke('up'), color: fill('up'), log2: d.up.length}, 
+                { stroke: stroke('none'), color: fill('none'), log2: d.none.length }, 
+                { stroke: stroke('down'), color: fill('down'), log2: d.down.length }
             ],
             arc = d3.svg.arc()
                 .innerRadius(innerR)
                 .outerRadius(d.r),
             pie = d3.layout.pie()
                 .sort(null)
-                .value(function(d) { return d.Log2FoldChange; });
+                .value(function(d) { return d.log2; });
         
         // Add background circle circle to hide links and listen to events
         g.selectAll('circle').data([d])
@@ -484,7 +500,7 @@ function initVis(){
             .append('textPath')
                 .attr('xlink:href', function(d){ return '#txtPath' + d.id; })
 	           .attr('startOffset', '50%')	
-                .text(function(d) { return d.Process; });*/
+                .text(function(d) { return d.process; });*/
         
         
         handleGenes.call(this, d);
@@ -530,7 +546,7 @@ function initVis(){
      * Create process Annotations
      *****************************/
     
-    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([8,12]);
+    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([5,9]);
     
     annotations = svg.selectAll('.node')
                         .data(data.processes);
@@ -597,7 +613,7 @@ function initVis(){
     function appendTSpan(d){
         
         var txt = d3.select(this),
-            words = d.Process.split(' '),
+            words = d.process.split(' '),
             y = 0;
         
         words.unshift('+');
@@ -618,7 +634,7 @@ function initVis(){
     
     
         
-    //.text(function(d){ return d.Process;});
+    //.text(function(d){ return d.process;});
     
     
     /*var div = d3.select(selector)
@@ -807,7 +823,7 @@ function search(str){
     str = str.toLowerCase();
     
     var matchingGenes = d3.selectAll('.gene')
-                        .filter(function(d){ return d.Name.toLocaleLowerCase().match(str); })
+                        .filter(function(d){ return d.gene.toLocaleLowerCase().match(str); })
                         .classed('search', true);
     
     matchingGenes.each(function(d){
@@ -3140,7 +3156,7 @@ module.exports = amdefine;
       var content = html.apply(this, args),
           poffset = offset.apply(this, args),
           dir     = direction.apply(this, args),
-          nodel   = d3.select(node),
+          nodel   = getNodeEl(),
           i       = directions.length,
           coords,
           scrollTop  = document.documentElement.scrollTop || document.body.scrollTop,
@@ -3163,7 +3179,7 @@ module.exports = amdefine;
     //
     // Returns a tip
     tip.hide = function() {
-      var nodel = d3.select(node)
+      var nodel = getNodeEl()
       nodel.style({ opacity: 0, 'pointer-events': 'none' })
       return tip
     }
@@ -3176,10 +3192,10 @@ module.exports = amdefine;
     // Returns tip or attribute value
     tip.attr = function(n, v) {
       if (arguments.length < 2 && typeof n === 'string') {
-        return d3.select(node).attr(n)
+        return getNodeEl().attr(n)
       } else {
         var args =  Array.prototype.slice.call(arguments)
-        d3.selection.prototype.attr.apply(d3.select(node), args)
+        d3.selection.prototype.attr.apply(getNodeEl(), args)
       }
 
       return tip
@@ -3193,10 +3209,10 @@ module.exports = amdefine;
     // Returns tip or style property value
     tip.style = function(n, v) {
       if (arguments.length < 2 && typeof n === 'string') {
-        return d3.select(node).style(n)
+        return getNodeEl().style(n)
       } else {
         var args =  Array.prototype.slice.call(arguments)
-        d3.selection.prototype.style.apply(d3.select(node), args)
+        d3.selection.prototype.style.apply(getNodeEl(), args)
       }
 
       return tip
@@ -3237,6 +3253,17 @@ module.exports = amdefine;
       html = v == null ? v : d3.functor(v)
 
       return tip
+    }
+
+    // Public: destroys the tooltip and removes it from the DOM
+    //
+    // Returns a tip
+    tip.destroy = function() {
+      if(node) {
+        getNodeEl().remove();
+        node = null;
+      }
+      return tip;
     }
 
     function d3_tip_direction() { return 'n' }
@@ -3339,6 +3366,15 @@ module.exports = amdefine;
         return el
 
       return el.ownerSVGElement
+    }
+
+    function getNodeEl() {
+      if(node === null) {
+        node = initNode();
+        // re-add node to DOM
+        document.body.appendChild(node);
+      };
+      return d3.select(node);
     }
 
     // Private - gets the screen coordinates of a shape
@@ -27664,8 +27700,74 @@ var substr = 'ab'.substr(-1) === 'b'
 }).call(this,require('_process'))
 },{"_process":45}],45:[function(require,module,exports){
 // shim for using process in browser
-
 var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+(function () {
+    try {
+        cachedSetTimeout = setTimeout;
+    } catch (e) {
+        cachedSetTimeout = function () {
+            throw new Error('setTimeout is not defined');
+        }
+    }
+    try {
+        cachedClearTimeout = clearTimeout;
+    } catch (e) {
+        cachedClearTimeout = function () {
+            throw new Error('clearTimeout is not defined');
+        }
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -27690,7 +27792,7 @@ function drainQueue() {
     if (draining) {
         return;
     }
-    var timeout = setTimeout(cleanUpNextTick);
+    var timeout = runTimeout(cleanUpNextTick);
     draining = true;
 
     var len = queue.length;
@@ -27707,7 +27809,7 @@ function drainQueue() {
     }
     currentQueue = null;
     draining = false;
-    clearTimeout(timeout);
+    runClearTimeout(timeout);
 }
 
 process.nextTick = function (fun) {
@@ -27719,7 +27821,7 @@ process.nextTick = function (fun) {
     }
     queue.push(new Item(fun, args));
     if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
+        runTimeout(drainQueue);
     }
 };
 
