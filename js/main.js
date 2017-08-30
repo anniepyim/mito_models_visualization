@@ -23,7 +23,7 @@ App.init = function(options){
     App.views.vis = require('./views/process.vis.js');
     
     App.views.main = new Main();
-    App.views.main.setElement('body').render();
+    App.views.main.setElement('#sidebar').render();
     
     //App.views.navBar = new NavBar();
     //App.views.navBar.setElement('#navbar').render();
