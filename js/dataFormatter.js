@@ -27,10 +27,13 @@ function dataFormatter(nodes, links){
         process.genes = genes;
         process.log2 = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.log2); }, 0);
         process.regulated = process.up.length + process.down.length;
+
         
         //Assign genes a parent
         _.each(genes, function(g){
             g.parent = process;
+            g.log2 = d3.format(".3f")(g.log2);
+            g.pvalue = d3.format(".3f")(g.pvalue);
         });
         
         return process;

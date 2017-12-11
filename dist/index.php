@@ -1,5 +1,16 @@
 <?php
-$id = $_GET['id'];
+$sampleID = $_GET['sampleID'];
+$organism = $_GET['organism'];
+$id = $_GET['sessionid'];
+
+//Get info for mysql server
+$str = file_get_contents('mysql/mysql_info.json');
+$json = json_decode($str, true);
+$host = $json['host'];
+$port = $json['port'];
+$user = $json['user'];
+$passwd = $json['passwd'];
+$unix_socket = $json['unix_socket'];
 ?>
 <html>
     <head>
@@ -23,7 +34,7 @@ $id = $_GET['id'];
     
     <body></body>
     <!-- App Script  -->
-    <script data-my_var_1="<?php echo $id; ?>" data-my_var_2="./data/links.json" src="js/App.js"></script>
+    <script sampleID="<?php echo $sampleID; ?>" links_file="./data/links.json" organism="<?php echo $organism; ?>" sessionid="<?php echo $id; ?>" host="<?php echo $host; ?>" port="<?php echo $port; ?>" user="<?php echo $user; ?>" passwd="<?php echo $passwd; ?>" unix_socket="<?php echo $unix_socket; ?>" src="js/App.js"></script>
     <script>
         
         

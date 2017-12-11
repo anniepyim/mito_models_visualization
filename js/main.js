@@ -4,12 +4,15 @@ var d3 = require('d3');
 var App = {};
 
 var this_js_script = $('script[src*=App]');
-    var my_var_1 = this_js_script.attr('data-my_var_1');   
-        if (typeof my_var_1 === "undefined" ) 
-        {
-                var my_var_1 = 'some_default_value';
-        }
-    var my_var_2 = this_js_script.attr('data-my_var_2'); 
+    var sampleID = this_js_script.attr('sampleID'), 
+        organism = this_js_script.attr('organism'), 
+        sessionid = this_js_script.attr('sessionid'), 
+        links_file = this_js_script.attr('links_file'),
+        host = this_js_script.attr('host'),
+        port = this_js_script.attr('port'),
+        user = this_js_script.attr('user'),
+        passwd = this_js_script.attr('passwd'),
+        unix_socket = this_js_script.attr('unix_socket');
 //end
 
 App.init = function(options){ 
@@ -30,16 +33,23 @@ App.init = function(options){
     
     App.views.vis.selector('#vis');
     
-    d3.json("./data/" + my_var_1 + ".json", function(error, nodes) {
-        if (error) return console.warn(my_var_1 + ".json");
-        
-        d3.json(my_var_2, function(error, links) {
-            if (error) return console.warn(my_var_2);
-            
+    parameter = 'sampleID=' + sampleID + '&organism='+ organism + '&sessionid='+ sessionid + '&host='+host + '&port='+port + '&user='+user + '&passwd='+passwd + '&unix_socket='+unix_socket;
+    
+    jQuery.ajax({
+        url: "./python/mitomodel_mysql.py", 
+        data: parameter,
+        type: "POST",
+        //dataType: "json",    
+        success: function (json) {
+            nodes = JSON.parse(json[0]["nodes"])
+            links = JSON.parse(json[0]["links"])
             App.views.vis.init(nodes, links);
-        });
-        
+        },
+        error: function(e){
+            console.log(e);
+        }
     });
+
 };
 
 module.exports = App;

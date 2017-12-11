@@ -1,0 +1,4 @@
+file	organism
+../main_files/human/gene_function.txt	Human
+../main_files/mouse/mouse_gene_function.txt	Mouse
+../main_files/fly/fly_gene_function.txt	Fly
