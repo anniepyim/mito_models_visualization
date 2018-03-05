@@ -8,11 +8,12 @@ function dataFormatter(nodes, links){
     var data = {};
     
     data.nodes = _.map(nodes, function(n){
-        n.id = _.uniqueId(n.Name + '_');
+        n.id = _.uniqueId(n.gene + '_');
+        n.mutation = n.mutation.split(',')
         return n;
     });
     
-    data.processes = _.groupBy(data.nodes, function(n){ return n.Process; });
+    data.processes = _.groupBy(data.nodes, function(n){ return n.process; });
     data.processes = _.map(data.processes, function(genes, key){
     
         var process = {};
@@ -23,20 +24,23 @@ function dataFormatter(nodes, links){
         process.down = _.chain(genes).filter(regulation.isDownRegulated).map( function(d){ return _.extend(d, {'regulated': 'down'}); } ).value();
         process.none = _.chain(genes).filter(regulation.isNotRegulated).map( function(d){ return _.extend(d, {'regulated': 'none'}); } ).value();
         
-        process.Process = key;
+        process.process = key;
         process.genes = genes;
-        process.Log2FoldChange = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.Log2FoldChange); }, 0);
+        process.log2 = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.log2); }, 0);
         process.regulated = process.up.length + process.down.length;
+
         
         //Assign genes a parent
         _.each(genes, function(g){
             g.parent = process;
+            g.log2 = d3.format(".3f")(g.log2);
+            g.pvalue = d3.format(".3f")(g.pvalue);
         });
         
         return process;
     });
     
-    // Sort by number of regulated genes
+// Sort by number of regulated genes
     data.processes.sort(function(a,b){
         return b.regulated - a.regulated;
     });
@@ -59,15 +63,15 @@ function dataFormatter(nodes, links){
     // (many nodes can have same name)
     _.each(data.nodes, function(n){ 
         
-        if(_.isUndefined(nodeDic[n.Name])){
-            nodeDic[n.Name] = [];
+        if(_.isUndefined(nodeDic[n.gene])){
+            nodeDic[n.gene] = [];
         }
-        nodeDic[n.Name].push(n);
+        nodeDic[n.gene].push(n);
     });
     
     // Create process dictionary
     _.each(data.processes, function(n){
-        processDic[n.Process] = n;
+        processDic[n.process] = n;
     });
     
     _.each(links, function(l){
@@ -84,8 +88,8 @@ function dataFormatter(nodes, links){
         
             _.each(targets, function(t){
             
-                var p1 = processDic[s.Process],
-                    p2 = processDic[t.Process];
+                var p1 = processDic[s.process],
+                    p2 = processDic[t.process];
         
                 // Only take into account interactions from different processes
                 if(p1.id === p2.id) return;

@@ -3,6 +3,17 @@ var d3 = require('d3');
 //Public members
 var App = {};
 
+var this_js_script = $('script[src*=App]');
+    var sampleID = this_js_script.attr('sampleID'), 
+        organism = this_js_script.attr('organism'), 
+        sessionid = this_js_script.attr('sessionid'), 
+        links_file = this_js_script.attr('links_file'),
+        host = this_js_script.attr('host'),
+        port = this_js_script.attr('port'),
+        user = this_js_script.attr('user'),
+        passwd = this_js_script.attr('passwd'),
+        unix_socket = this_js_script.attr('unix_socket');
+
 App.init = function(options){ 
     
     
@@ -22,15 +33,22 @@ App.init = function(options){
     App.views.vis.selector('#vis');
     
     
-    d3.json('../data/mouse-21.3.json', function(error, nodes) {
-        if (error) return console.warn(error);
-        
-        d3.json('../data/links.json', function(error, links) {
-            if (error) return console.warn(error);
-            
+    parameter = 'sampleID=' + sampleID + '&organism='+ organism + '&sessionid='+ sessionid + '&host='+host + '&port='+port + '&user='+user + '&passwd='+passwd + '&unix_socket='+unix_socket;
+    
+    jQuery.ajax({
+        url: "./python/mitomodel_mysql.py", 
+        data: parameter,
+        type: "POST",
+        //dataType: "json",    
+        success: function (json) {
+            nodes = JSON.parse(json[0]["nodes"])
+            links = JSON.parse(json[0]["links"])
+
             App.views.vis.init(nodes, links);
-        });
-        
+        },
+        error: function(e){
+            console.log(e);
+        }
     });
 };
 

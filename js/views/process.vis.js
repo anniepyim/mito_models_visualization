@@ -22,7 +22,7 @@ var selector,
     highlightColor = '#FFFBCC',
     mutationColor = '#2c3e50',
     templates = require('../templates.js'),
-    prPadding = 1.7,
+    prPadding = 1.6,
     clickEvent = {target: null, holdClick: false},
     tipTemplate = require('../templates').tooltip;
 
@@ -51,27 +51,39 @@ function initVis(){
     var pack = d3.layout.pack()
         .size([diameter - 4, diameter - 4])
         .children(function(d){ return d.genes;})
-        .value(function(d) { return Math.abs(d.Log2FoldChange); })
+        .value(function(d) { return Math.abs(d.log2); })
         .sort(function(a,b){
+            // var threshold = 10000000;
+
+            // if ((a.value > threshold) && (b.value > threshold)) {
+            //     return -(a.value - b.value);
+            // } else {
+            //     return -1;
+            // }
+            // if(a.genes && b.genes){
+            //     return  b.regulated - a.regulated;
+            // }
             
-            if(a.genes && b.genes){
-                return  b.regulated - a.regulated;
-            }
-            
-            return a.value - b.value;
+            return -(a.value - b.value);
         })
         .nodes(root);
-    
-    // Use all space available while keeping padding between elements
-    var pxMin = _.min(data.processes, function(d){return d.x;}),
-        pyMin = _.min(data.processes, function(d){return d.y;}),
-        xMin = - (pxMin.x * prPadding) + pxMin.r,
-        yMin = - (pyMin.y * prPadding) + pyMin.r;
     
     _.each(data.processes, function(d){
         d.original = {};
         d.original.x = d.x;
         d.original.y = d.y;
+        d.xmin = (d.x * prPadding) - d.r;
+        d.ymin = (d.y * prPadding) - d.r;
+    });
+    
+    // Use all space available while keeping padding between elements
+    var pxMin = _.min(data.processes, function(d){return d.xmin;}),
+        pyMin = _.min(data.processes, function(d){return d.ymin;}),
+        xMin = - (pxMin.x * prPadding) + pxMin.r,
+        yMin = - (pyMin.y * prPadding) + pyMin.r;
+        
+    
+    _.each(data.processes, function(d){
         d.x = (d.x * prPadding) + xMin;
         d.y = (d.y * prPadding) + yMin;
     });
@@ -99,16 +111,16 @@ function initVis(){
                 .attr('transform', function(d){ return 'translate(' + d.x + ',' + d.y + ')'; }),
             innerR = d.r * 0.8,
             arr = [ 
-                { stroke: stroke('up'), color: fill('up'), Log2FoldChange: d.up.length}, 
-                { stroke: stroke('none'), color: fill('none'), Log2FoldChange: d.none.length }, 
-                { stroke: stroke('down'), color: fill('down'), Log2FoldChange: d.down.length }
+                { stroke: stroke('up'), color: fill('up'), log2: d.up.length}, 
+                { stroke: stroke('none'), color: fill('none'), log2: d.none.length }, 
+                { stroke: stroke('down'), color: fill('down'), log2: d.down.length }
             ],
             arc = d3.svg.arc()
                 .innerRadius(innerR)
                 .outerRadius(d.r),
             pie = d3.layout.pie()
                 .sort(null)
-                .value(function(d) { return d.Log2FoldChange; });
+                .value(function(d) { return d.log2; });
         
         // Add background circle circle to hide links and listen to events
         g.selectAll('circle').data([d])
@@ -117,10 +129,9 @@ function initVis(){
             .attr('id', function(d) { return 'circle_' + d.id; })
             .attr('r', d.r)
             .attr('stroke-width', 2)
-            .attr('stroke', function(d){ 
-                var p = _.pluck(d.genes, 'Variant_sites');
-                return (p.join('').length > 0) ? mutationColor : null;
-            })
+            /*.attr('stroke', function(d){ 
+                return (d.mutation[0] !== "") ? mutationColor : null;
+            })*/
             .on('mouseout', onMouseOut)
             .on('mouseover', onMouseOverNode);
         
@@ -147,8 +158,8 @@ function initVis(){
                 .style("text-anchor","middle")
             .append('textPath')
                 .attr('xlink:href', function(d){ return '#txtPath' + d.id; })
-	           .attr('startOffset', '50%')	
-                .text(function(d) { return d.Process; });*/
+               .attr('startOffset', '50%')  
+                .text(function(d) { return d.process; });*/
         
         
         handleGenes.call(this, d);
@@ -170,8 +181,8 @@ function initVis(){
                 .attr('cy', function(d){ return d.y; })
                 .attr('opacity', 0)
                 .attr('display','none')
-                .attr('stroke-width', function(d){ return (d.mutation.length) ? 1.2 : 1; })
-                .attr('stroke', function(d){ return (d.mutation.length) ? mutationColor : stroke(d.regulated);})
+                .attr('stroke-width', function(d){ return (d.mutation[0] !== "") ? 1.2 : 1; })
+                .attr('stroke', function(d){ return (d.mutation[0] !== "") ? mutationColor : stroke(d.regulated);})
                 .attr('class', function(d){ return 'gene ' + d.parent.id; })
                 .on('mouseout', onMouseOut)
                 .on('mouseover', onMouseOverNode);
@@ -194,7 +205,7 @@ function initVis(){
      * Create process Annotations
      *****************************/
     
-    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([8,12]);
+    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([5,9]);
     
     annotations = svg.selectAll('.node')
                         .data(data.processes);
@@ -205,7 +216,7 @@ function initVis(){
         .attr('y', function(d){ return d.y + d.r;})
         .attr('class', 'node theme')
         .style('text-anchor','middle')
-        .style('font-size', function(d){ return ann_scale(d.r); })
+        .style('font-size', function(d){ return ann_scale(d.r)+"px"; })
         .on('mouseover', function(d){
             if(clickEvent.holdClick) return;
             
@@ -261,7 +272,7 @@ function initVis(){
     function appendTSpan(d){
         
         var txt = d3.select(this),
-            words = d.Process.split(' '),
+            words = d.process.split(' '),
             y = 0;
         
         words.unshift('+');
@@ -282,7 +293,7 @@ function initVis(){
     
     
         
-    //.text(function(d){ return d.Process;});
+    //.text(function(d){ return d.process;});
     
     
     /*var div = d3.select(selector)
@@ -471,7 +482,7 @@ function search(str){
     str = str.toLowerCase();
     
     var matchingGenes = d3.selectAll('.gene')
-                        .filter(function(d){ return d.Name.toLocaleLowerCase().match(str); })
+                        .filter(function(d){ return d.gene.toLocaleLowerCase().match(str); })
                         .classed('search', true);
     
     matchingGenes.each(function(d){

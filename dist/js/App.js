@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
 // Required scripts
 var _ = require('underscore');
 var regulation = require('./geneRegulation')();
@@ -9,11 +9,12 @@ function dataFormatter(nodes, links){
     var data = {};
     
     data.nodes = _.map(nodes, function(n){
-        n.id = _.uniqueId(n.Name + '_');
+        n.id = _.uniqueId(n.gene + '_');
+        n.mutation = n.mutation.split(',')
         return n;
     });
     
-    data.processes = _.groupBy(data.nodes, function(n){ return n.Process; });
+    data.processes = _.groupBy(data.nodes, function(n){ return n.process; });
     data.processes = _.map(data.processes, function(genes, key){
     
         var process = {};
@@ -24,20 +25,23 @@ function dataFormatter(nodes, links){
         process.down = _.chain(genes).filter(regulation.isDownRegulated).map( function(d){ return _.extend(d, {'regulated': 'down'}); } ).value();
         process.none = _.chain(genes).filter(regulation.isNotRegulated).map( function(d){ return _.extend(d, {'regulated': 'none'}); } ).value();
         
-        process.Process = key;
+        process.process = key;
         process.genes = genes;
-        process.Log2FoldChange = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.Log2FoldChange); }, 0);
+        process.log2 = _.reduce(genes, function(memo, n){ return memo + Math.abs(n.log2); }, 0);
         process.regulated = process.up.length + process.down.length;
+
         
         //Assign genes a parent
         _.each(genes, function(g){
             g.parent = process;
+            g.log2 = d3.format(".3f")(g.log2);
+            g.pvalue = d3.format(".3f")(g.pvalue);
         });
         
         return process;
     });
     
-    // Sort by number of regulated genes
+// Sort by number of regulated genes
     data.processes.sort(function(a,b){
         return b.regulated - a.regulated;
     });
@@ -60,15 +64,15 @@ function dataFormatter(nodes, links){
     // (many nodes can have same name)
     _.each(data.nodes, function(n){ 
         
-        if(_.isUndefined(nodeDic[n.Name])){
-            nodeDic[n.Name] = [];
+        if(_.isUndefined(nodeDic[n.gene])){
+            nodeDic[n.gene] = [];
         }
-        nodeDic[n.Name].push(n);
+        nodeDic[n.gene].push(n);
     });
     
     // Create process dictionary
     _.each(data.processes, function(n){
-        processDic[n.Process] = n;
+        processDic[n.process] = n;
     });
     
     _.each(links, function(l){
@@ -85,8 +89,8 @@ function dataFormatter(nodes, links){
         
             _.each(targets, function(t){
             
-                var p1 = processDic[s.Process],
-                    p2 = processDic[t.Process];
+                var p1 = processDic[s.process],
+                    p2 = processDic[t.process];
         
                 // Only take into account interactions from different processes
                 if(p1.id === p2.id) return;
@@ -146,11 +150,11 @@ function geneRegulation(log2Limit, pvalLimit){
     pvalLimit = (pvalLimit !== undefined) ? pvalLimit :  0.05;
 
     function isUpRegulated(g){
-        return g.Log2FoldChange > log2Limit || (g.Log2FoldChange > 0 && g['p-value'] < 0.05);
+        return g.log2 > log2Limit || (g.log2 > 0 && g.pvalue < 0.05);
     }
 
     function isDownRegulated(g){
-        return g.Log2FoldChange < - log2Limit || (g.Log2FoldChange < 0 && g['p-value'] < 0.05);
+        return g.log2 < - log2Limit || (g.log2 < 0 && g.pvalue < 0.05);
     }
 
     function isNotRegulated(g){
@@ -186,6 +190,17 @@ var d3 = require('d3');
 //Public members
 var App = {};
 
+var this_js_script = $('script[src*=App]');
+    var sampleID = this_js_script.attr('sampleID'), 
+        organism = this_js_script.attr('organism'), 
+        sessionid = this_js_script.attr('sessionid'), 
+        links_file = this_js_script.attr('links_file'),
+        host = this_js_script.attr('host'),
+        port = this_js_script.attr('port'),
+        user = this_js_script.attr('user'),
+        passwd = this_js_script.attr('passwd'),
+        unix_socket = this_js_script.attr('unix_socket');
+
 App.init = function(options){ 
     
     
@@ -205,20 +220,27 @@ App.init = function(options){
     App.views.vis.selector('#vis');
     
     
-    d3.json('../data/mouse-21.3.json', function(error, nodes) {
-        if (error) return console.warn(error);
-        
-        d3.json('../data/links.json', function(error, links) {
-            if (error) return console.warn(error);
-            
+    parameter = 'sampleID=' + sampleID + '&organism='+ organism + '&sessionid='+ sessionid + '&host='+host + '&port='+port + '&user='+user + '&passwd='+passwd + '&unix_socket='+unix_socket;
+    
+    jQuery.ajax({
+        url: "./python/mitomodel_mysql.py", 
+        data: parameter,
+        type: "POST",
+        //dataType: "json",    
+        success: function (json) {
+            nodes = JSON.parse(json[0]["nodes"])
+            links = JSON.parse(json[0]["links"])
+
             App.views.vis.init(nodes, links);
-        });
-        
+        },
+        error: function(e){
+            console.log(e);
+        }
     });
 };
 
 module.exports = App;
-},{"./views/main":5,"./views/process.vis.js":6,"d3":12}],4:[function(require,module,exports){
+},{"./views/main":5,"./views/process.vis.js":6,"d3":11}],4:[function(require,module,exports){
 (function (global){
 var glob = ('undefined' === typeof window) ? global : window,
 
@@ -227,33 +249,39 @@ Handlebars = glob.Handlebars || require('handlebars');
 this["Templates"] = this["Templates"] || {};
 
 this["Templates"]["main"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    return "<!-- Page Content -->\n<div class=\"container main\">\n    \n    \n    <div class=\"row\">\n        \n        <div class=\"col-md-3\">\n            \n            <div class=\"row\">\n            \n                <div class=\"col-md-12 title\" style=\"margin-top:20px;\">Find a Gene</div>\n            \n                <div class=\"col-md-12\" style=\"margin-top:10px;\">\n                    <input type=\"text\" class=\"form-control\" placeholder=\"Search gene by name...\">\n                    <ul class=\"list-group results\"></ul>\n                </div>\n\n\n                <div class=\"col-md-12 miniTitle\" style=\"margin-top:20px;\">\n                    Legend\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Color</strong> shows gene regulation\n                </div>\n\n                <div class=\"col-md-6\">\n                    <svg width=\"120\" height=\"40\">\n                        <rect x=\"0\" y=\"10\" width=\"38\" height=\"7\" fill=\"#2171b5\"></rect>\n                        <rect x=\"38\" y=\"10\" width=\"38\" height=\"7\" fill=\"#BECCAE\"></rect>\n                        <rect x=\"76\" y=\"10\" width=\"38\" height=\"7\" fill=\"#C72D0A\"></rect>\n\n                        <text x=\"10\" y=\"26\" class=\"legendText\">Up</text>\n                        <text x=\"44\" y=\"26\" class=\"legendText\">None</text>\n                        <text x=\"80\" y=\"26\" class=\"legendText\">Down</text>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Dark Borders</strong> show mutations\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"120\" height=\"40\">\n                        <circle cx=\"58\" cy=\"20\" fill=\"none\" r=\"18\" stroke-width=\"1.2\" stroke=\"#2c3e50\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Size</strong> shows Log2 fold change\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"120\" height=\"40\">\n                        <circle cx=\"58\" cy=\"20\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"18\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                        <circle cx=\"58\" cy=\"31\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"6\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-12\">\n                    <hr>\n                </div>\n            \n            </div>\n            \n            \n            <div class=\"row tip\" style=\"margin-top:20px;\">\n            </div>\n            \n            \n        </div>\n        \n        <div class=\"col-md-9\">\n            <div id=\"vis\" class=\"vis\"></div>\n        </div> \n    </div>\n    \n</div>\n\n";
+    return "<!-- Page Content -->\n<div class=\"container main\">\n    \n    \n    <div class=\"row\">\n        \n        <div class=\"col-md-2\">\n            \n            <div class=\"row\">\n            \n                <div class=\"col-md-12 title\" style=\"margin-top:20px;\">Find a Gene</div>\n            \n                <div class=\"col-md-12\" style=\"margin-top:10px;\">\n                    <input type=\"text\" class=\"form-control\" placeholder=\"Search gene by name...\" style=\"font-size:11px\">\n                    <ul class=\"list-group results\"></ul>\n                </div>\n\n\n                <div class=\"col-md-12 miniTitle\" style=\"margin-top:20px;\">\n                    Legend\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Color</strong> shows gene regulation\n                </div>\n\n                <div class=\"col-md-6\">\n                    <svg width=\"70\" height=\"65\">\n                        <rect x=\"0\" y=\"10\" width=\"25\" height=\"7\" fill=\"#2171b5\"></rect>\n                        <rect x=\"0\" y=\"25\" width=\"25\" height=\"7\" fill=\"#BECCAE\"></rect>\n                        <rect x=\"0\" y=\"40\" width=\"25\" height=\"7\" fill=\"#C72D0A\"></rect>\n\n                        <text x=\"30\" y=\"17\" class=\"legendText\">Up</text>\n                        <text x=\"30\" y=\"32\" class=\"legendText\">None</text>\n                        <text x=\"30\" y=\"48\" class=\"legendText\">Down</text>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\" style=\"padding-right:0px\">\n                    <strong>Dark Borders</strong> show mutations\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"70\" height=\"50\">\n                        <circle cx=\"25\" cy=\"18\" fill=\"none\" r=\"16\" stroke-width=\"1.2\" stroke=\"#2c3e50\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <strong>Size</strong> shows Log2 fold change\n                </div>\n\n                <div class=\"col-md-6 legendText\">\n                    <svg width=\"70\" height=\"50\">\n                        <circle cx=\"25\" cy=\"20\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"16\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                        <circle cx=\"25\" cy=\"30\" style=\"stroke-dasharray: 2 2\" fill=\"none\" r=\"6\" stroke-width=\"1\" stroke=\"#5f6062\"></circle>\n                    </svg>\n                </div>\n\n                <div class=\"col-md-12\">\n                    <hr>\n                </div>\n            \n            </div>\n            \n            \n            <div class=\"row tip\" style=\"margin-top:20px;\">\n            </div>\n            \n            \n        </div>\n        \n        <div class=\"col-md-10\">\n            <div id=\"vis\" class=\"vis\"></div>\n        </div> \n    </div>\n    \n</div>";
 },"useData":true});
 
 this["Templates"]["result"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+    var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
 
   return "<li class=\"list-group-item\"><span class=\"title\">"
-    + alias4(((helper = (helper = helpers.Name || (depth0 != null ? depth0.Name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Name","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.gene || (depth0 != null ? depth0.gene : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene","hash":{},"data":data}) : helper)))
     + "</span><br><span>"
-    + alias4(((helper = (helper = helpers.Process || (depth0 != null ? depth0.Process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Process","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.process || (depth0 != null ? depth0.process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"process","hash":{},"data":data}) : helper)))
     + "</span></li>";
 },"useData":true});
 
-this["Templates"]["tooltip"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+this["Templates"]["tooltip"] = Handlebars.template({"1":function(container,depth0,helpers,partials,data) {
+    return "    "
+    + container.escapeExpression(container.lambda(depth0, depth0))
+    + "<br>\n";
+},"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
 
   return "<div class=\"col-md-12 title\">"
-    + alias4(((helper = (helper = helpers.Name || (depth0 != null ? depth0.Name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Name","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.gene || (depth0 != null ? depth0.gene : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-12 process\">"
-    + alias4(((helper = (helper = helpers.Process || (depth0 != null ? depth0.Process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Process","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.process || (depth0 != null ? depth0.process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"process","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-12 function\">"
-    + alias4(((helper = (helper = helpers.Function || (depth0 != null ? depth0.Function : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Function","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.gene_function || (depth0 != null ? depth0.gene_function : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene_function","hash":{},"data":data}) : helper)))
+    + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Log2 FC\n</div>\n                \n<div class=\"col-md-6\">"
+    + alias4(((helper = (helper = helpers.log2 || (depth0 != null ? depth0.log2 : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"log2","hash":{},"data":data}) : helper)))
     + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Pvalue\n</div>\n                \n<div class=\"col-md-6\">"
-    + alias4(((helper = (helper = helpers["p-value"] || (depth0 != null ? depth0["p-value"] : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"p-value","hash":{},"data":data}) : helper)))
-    + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Log2 fold change\n</div>\n                \n<div class=\"col-md-6\">"
-    + alias4(((helper = (helper = helpers.Log2FoldChange || (depth0 != null ? depth0.Log2FoldChange : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"Log2FoldChange","hash":{},"data":data}) : helper)))
-    + "</div>";
+    + alias4(((helper = (helper = helpers.pvalue || (depth0 != null ? depth0.pvalue : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"pvalue","hash":{},"data":data}) : helper)))
+    + "</div>\n\n<div class=\"col-md-12 miniTitle\">\n    mutation\n</div>\n               \n<div class=\"col-md-12 mutation\">\n"
+    + ((stack1 = helpers.each.call(alias1,(depth0 != null ? depth0.mutation : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "\n</div>";
 },"useData":true});
 
 if (typeof exports === 'object' && exports) {module.exports = this["Templates"];}
@@ -302,7 +330,7 @@ module.exports = Backbone.View.extend({
         var val = $.trim($(e.target).val()),
             c = String.fromCharCode(e.keyCode),
             isWordCharacter = c.match(/\w/),
-            isBackspaceOrDelete = (event.keyCode == 8 || event.keyCode == 46);
+            isBackspaceOrDelete = (e.keyCode == 8 || e.keyCode == 46);
                 
         
         if(isWordCharacter || isBackspaceOrDelete){
@@ -358,7 +386,7 @@ var selector,
     highlightColor = '#FFFBCC',
     mutationColor = '#2c3e50',
     templates = require('../templates.js'),
-    prPadding = 1.7,
+    prPadding = 1.6,
     clickEvent = {target: null, holdClick: false},
     tipTemplate = require('../templates').tooltip;
 
@@ -387,27 +415,39 @@ function initVis(){
     var pack = d3.layout.pack()
         .size([diameter - 4, diameter - 4])
         .children(function(d){ return d.genes;})
-        .value(function(d) { return Math.abs(d.Log2FoldChange); })
+        .value(function(d) { return Math.abs(d.log2); })
         .sort(function(a,b){
+            // var threshold = 10000000;
+
+            // if ((a.value > threshold) && (b.value > threshold)) {
+            //     return -(a.value - b.value);
+            // } else {
+            //     return -1;
+            // }
+            // if(a.genes && b.genes){
+            //     return  b.regulated - a.regulated;
+            // }
             
-            if(a.genes && b.genes){
-                return  b.regulated - a.regulated;
-            }
-            
-            return a.value - b.value;
+            return -(a.value - b.value);
         })
         .nodes(root);
-    
-    // Use all space available while keeping padding between elements
-    var pxMin = _.min(data.processes, function(d){return d.x;}),
-        pyMin = _.min(data.processes, function(d){return d.y;}),
-        xMin = - (pxMin.x * prPadding) + pxMin.r,
-        yMin = - (pyMin.y * prPadding) + pyMin.r;
     
     _.each(data.processes, function(d){
         d.original = {};
         d.original.x = d.x;
         d.original.y = d.y;
+        d.xmin = (d.x * prPadding) - d.r;
+        d.ymin = (d.y * prPadding) - d.r;
+    });
+    
+    // Use all space available while keeping padding between elements
+    var pxMin = _.min(data.processes, function(d){return d.xmin;}),
+        pyMin = _.min(data.processes, function(d){return d.ymin;}),
+        xMin = - (pxMin.x * prPadding) + pxMin.r,
+        yMin = - (pyMin.y * prPadding) + pyMin.r;
+        
+    
+    _.each(data.processes, function(d){
         d.x = (d.x * prPadding) + xMin;
         d.y = (d.y * prPadding) + yMin;
     });
@@ -435,16 +475,16 @@ function initVis(){
                 .attr('transform', function(d){ return 'translate(' + d.x + ',' + d.y + ')'; }),
             innerR = d.r * 0.8,
             arr = [ 
-                { stroke: stroke('up'), color: fill('up'), Log2FoldChange: d.up.length}, 
-                { stroke: stroke('none'), color: fill('none'), Log2FoldChange: d.none.length }, 
-                { stroke: stroke('down'), color: fill('down'), Log2FoldChange: d.down.length }
+                { stroke: stroke('up'), color: fill('up'), log2: d.up.length}, 
+                { stroke: stroke('none'), color: fill('none'), log2: d.none.length }, 
+                { stroke: stroke('down'), color: fill('down'), log2: d.down.length }
             ],
             arc = d3.svg.arc()
                 .innerRadius(innerR)
                 .outerRadius(d.r),
             pie = d3.layout.pie()
                 .sort(null)
-                .value(function(d) { return d.Log2FoldChange; });
+                .value(function(d) { return d.log2; });
         
         // Add background circle circle to hide links and listen to events
         g.selectAll('circle').data([d])
@@ -453,10 +493,9 @@ function initVis(){
             .attr('id', function(d) { return 'circle_' + d.id; })
             .attr('r', d.r)
             .attr('stroke-width', 2)
-            .attr('stroke', function(d){ 
-                var p = _.pluck(d.genes, 'Variant_sites');
-                return (p.join('').length > 0) ? mutationColor : null;
-            })
+            /*.attr('stroke', function(d){ 
+                return (d.mutation[0] !== "") ? mutationColor : null;
+            })*/
             .on('mouseout', onMouseOut)
             .on('mouseover', onMouseOverNode);
         
@@ -483,8 +522,8 @@ function initVis(){
                 .style("text-anchor","middle")
             .append('textPath')
                 .attr('xlink:href', function(d){ return '#txtPath' + d.id; })
-	           .attr('startOffset', '50%')	
-                .text(function(d) { return d.Process; });*/
+               .attr('startOffset', '50%')  
+                .text(function(d) { return d.process; });*/
         
         
         handleGenes.call(this, d);
@@ -506,8 +545,8 @@ function initVis(){
                 .attr('cy', function(d){ return d.y; })
                 .attr('opacity', 0)
                 .attr('display','none')
-                .attr('stroke-width', function(d){ return (d.mutation.length) ? 1.2 : 1; })
-                .attr('stroke', function(d){ return (d.mutation.length) ? mutationColor : stroke(d.regulated);})
+                .attr('stroke-width', function(d){ return (d.mutation[0] !== "") ? 1.2 : 1; })
+                .attr('stroke', function(d){ return (d.mutation[0] !== "") ? mutationColor : stroke(d.regulated);})
                 .attr('class', function(d){ return 'gene ' + d.parent.id; })
                 .on('mouseout', onMouseOut)
                 .on('mouseover', onMouseOverNode);
@@ -530,7 +569,7 @@ function initVis(){
      * Create process Annotations
      *****************************/
     
-    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([8,12]);
+    var ann_scale = d3.scale.log().domain(d3.extent(data.processes, function(d){ return d.r; })).range([5,9]);
     
     annotations = svg.selectAll('.node')
                         .data(data.processes);
@@ -541,7 +580,7 @@ function initVis(){
         .attr('y', function(d){ return d.y + d.r;})
         .attr('class', 'node theme')
         .style('text-anchor','middle')
-        .style('font-size', function(d){ return ann_scale(d.r); })
+        .style('font-size', function(d){ return ann_scale(d.r)+"px"; })
         .on('mouseover', function(d){
             if(clickEvent.holdClick) return;
             
@@ -597,7 +636,7 @@ function initVis(){
     function appendTSpan(d){
         
         var txt = d3.select(this),
-            words = d.Process.split(' '),
+            words = d.process.split(' '),
             y = 0;
         
         words.unshift('+');
@@ -618,7 +657,7 @@ function initVis(){
     
     
         
-    //.text(function(d){ return d.Process;});
+    //.text(function(d){ return d.process;});
     
     
     /*var div = d3.select(selector)
@@ -807,7 +846,7 @@ function search(str){
     str = str.toLowerCase();
     
     var matchingGenes = d3.selectAll('.gene')
-                        .filter(function(d){ return d.Name.toLocaleLowerCase().match(str); })
+                        .filter(function(d){ return d.gene.toLocaleLowerCase().match(str); })
                         .classed('search', true);
     
     matchingGenes.each(function(d){
@@ -859,10 +898,10 @@ require('d3-tip')(d3);
 require('underscore'); // bootstrap
 
 App = require('./js/main');
-},{"./js/main":3,"backbone":9,"d3":12,"d3-tip":11,"handlebars":42,"jquery":43,"underscore":57}],8:[function(require,module,exports){
+},{"./js/main":3,"backbone":9,"d3":11,"d3-tip":10,"handlebars":42,"jquery":43,"underscore":57}],8:[function(require,module,exports){
 (function (process,__filename){
 /** vim: et:ts=4:sw=4:sts=4
- * @license amdefine 1.0.0 Copyright (c) 2011-2015, The Dojo Foundation All Rights Reserved.
+ * @license amdefine 1.0.1 Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/amdefine for details
  */
@@ -3089,8 +3128,6 @@ module.exports = amdefine;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"jquery":43,"underscore":57}],10:[function(require,module,exports){
-
-},{}],11:[function(require,module,exports){
 // d3.tip
 // Copyright (c) 2013 Justin Palmer
 //
@@ -3140,7 +3177,7 @@ module.exports = amdefine;
       var content = html.apply(this, args),
           poffset = offset.apply(this, args),
           dir     = direction.apply(this, args),
-          nodel   = d3.select(node),
+          nodel   = getNodeEl(),
           i       = directions.length,
           coords,
           scrollTop  = document.documentElement.scrollTop || document.body.scrollTop,
@@ -3163,7 +3200,7 @@ module.exports = amdefine;
     //
     // Returns a tip
     tip.hide = function() {
-      var nodel = d3.select(node)
+      var nodel = getNodeEl()
       nodel.style({ opacity: 0, 'pointer-events': 'none' })
       return tip
     }
@@ -3176,10 +3213,10 @@ module.exports = amdefine;
     // Returns tip or attribute value
     tip.attr = function(n, v) {
       if (arguments.length < 2 && typeof n === 'string') {
-        return d3.select(node).attr(n)
+        return getNodeEl().attr(n)
       } else {
         var args =  Array.prototype.slice.call(arguments)
-        d3.selection.prototype.attr.apply(d3.select(node), args)
+        d3.selection.prototype.attr.apply(getNodeEl(), args)
       }
 
       return tip
@@ -3193,10 +3230,10 @@ module.exports = amdefine;
     // Returns tip or style property value
     tip.style = function(n, v) {
       if (arguments.length < 2 && typeof n === 'string') {
-        return d3.select(node).style(n)
+        return getNodeEl().style(n)
       } else {
         var args =  Array.prototype.slice.call(arguments)
-        d3.selection.prototype.style.apply(d3.select(node), args)
+        d3.selection.prototype.style.apply(getNodeEl(), args)
       }
 
       return tip
@@ -3237,6 +3274,17 @@ module.exports = amdefine;
       html = v == null ? v : d3.functor(v)
 
       return tip
+    }
+
+    // Public: destroys the tooltip and removes it from the DOM
+    //
+    // Returns a tip
+    tip.destroy = function() {
+      if(node) {
+        getNodeEl().remove();
+        node = null;
+      }
+      return tip;
     }
 
     function d3_tip_direction() { return 'n' }
@@ -3341,6 +3389,15 @@ module.exports = amdefine;
       return el.ownerSVGElement
     }
 
+    function getNodeEl() {
+      if(node === null) {
+        node = initNode();
+        // re-add node to DOM
+        document.body.appendChild(node);
+      };
+      return d3.select(node);
+    }
+
     // Private - gets the screen coordinates of a shape
     //
     // Given a shape on the screen, will return an SVGPoint for the directions
@@ -3396,7 +3453,7 @@ module.exports = amdefine;
 
 }));
 
-},{}],12:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.17"
@@ -12951,6 +13008,8 @@ module.exports = amdefine;
   });
   if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
 }();
+},{}],12:[function(require,module,exports){
+
 },{}],13:[function(require,module,exports){
 'use strict';
 
@@ -13109,7 +13168,7 @@ var _logger = require('./logger');
 
 var _logger2 = _interopRequireDefault(_logger);
 
-var VERSION = '4.0.5';
+var VERSION = '4.0.11';
 exports.VERSION = VERSION;
 var COMPILER_REVISION = 7;
 
@@ -13532,7 +13591,7 @@ Compiler.prototype = {
       for (var _name in knownHelpers) {
         /* istanbul ignore else */
         if (_name in knownHelpers) {
-          options.knownHelpers[_name] = knownHelpers[_name];
+          this.options.knownHelpers[_name] = knownHelpers[_name];
         }
       }
     }
@@ -13947,6 +14006,7 @@ function compile(input, options, env) {
     throw new _exception2['default']('You must pass a string or Handlebars AST to Handlebars.compile. You passed ' + input);
   }
 
+  options = _utils.extend({}, options);
   if (!('data' in options)) {
     options.data = true;
   }
@@ -15036,11 +15096,11 @@ JavaScriptCompiler.prototype = {
       child = children[i];
       compiler = new this.compiler(); // eslint-disable-line new-cap
 
-      var index = this.matchExistingProgram(child);
+      var existing = this.matchExistingProgram(child);
 
-      if (index == null) {
+      if (existing == null) {
         this.context.programs.push(''); // Placeholder to prevent name conflicts for nested children
-        index = this.context.programs.length;
+        var index = this.context.programs.length;
         child.index = index;
         child.name = 'program' + index;
         this.context.programs[index] = compiler.compile(child, options, this.context, !this.precompile);
@@ -15049,12 +15109,14 @@ JavaScriptCompiler.prototype = {
 
         this.useDepths = this.useDepths || compiler.useDepths;
         this.useBlockParams = this.useBlockParams || compiler.useBlockParams;
+        child.useDepths = this.useDepths;
+        child.useBlockParams = this.useBlockParams;
       } else {
-        child.index = index;
-        child.name = 'program' + index;
+        child.index = existing.index;
+        child.name = 'program' + existing.index;
 
-        this.useDepths = this.useDepths || child.useDepths;
-        this.useBlockParams = this.useBlockParams || child.useBlockParams;
+        this.useDepths = this.useDepths || existing.useDepths;
+        this.useBlockParams = this.useBlockParams || existing.useBlockParams;
       }
     }
   },
@@ -15062,7 +15124,7 @@ JavaScriptCompiler.prototype = {
     for (var i = 0, len = this.context.environments.length; i < len; i++) {
       var environment = this.context.environments[i];
       if (environment && environment.equals(child)) {
-        return i;
+        return environment;
       }
     }
   },
@@ -15244,7 +15306,7 @@ JavaScriptCompiler.prototype = {
     var params = [],
         paramsInit = this.setupHelperArgs(name, paramSize, params, blockHelper);
     var foundHelper = this.nameLookup('helpers', name, 'helper'),
-        callContext = this.aliasable(this.contextName(0) + ' != null ? ' + this.contextName(0) + ' : {}');
+        callContext = this.aliasable(this.contextName(0) + ' != null ? ' + this.contextName(0) + ' : (container.nullContext || {})');
 
     return {
       params: params,
@@ -15378,10 +15440,11 @@ module.exports = exports['default'];
 
 
 },{"../base":15,"../exception":28,"../utils":41,"./code-gen":18}],22:[function(require,module,exports){
-/* istanbul ignore next */
+// File ignored in coverage tests via setting in .istanbul.yml
 /* Jison generated parser */
 "use strict";
 
+exports.__esModule = true;
 var handlebars = (function () {
     var parser = { trace: function trace() {},
         yy: {},
@@ -16113,8 +16176,8 @@ var handlebars = (function () {
         this.yy = {};
     }Parser.prototype = parser;parser.Parser = Parser;
     return new Parser();
-})();exports.__esModule = true;
-exports['default'] = handlebars;
+})();exports["default"] = handlebars;
+module.exports = exports["default"];
 
 
 },{}],23:[function(require,module,exports){
@@ -16749,9 +16812,23 @@ function Exception(message, node) {
     Error.captureStackTrace(this, Exception);
   }
 
-  if (loc) {
-    this.lineNumber = line;
-    this.column = column;
+  try {
+    if (loc) {
+      this.lineNumber = line;
+
+      // Work around issue under safari where we can't directly set the column value
+      /* istanbul ignore next */
+      if (Object.defineProperty) {
+        Object.defineProperty(this, 'column', {
+          value: column,
+          enumerable: true
+        });
+      } else {
+        this.column = column;
+      }
+    }
+  } catch (nop) {
+    /* Ignore if the browser is very particular */
   }
 }
 
@@ -17302,6 +17379,8 @@ function template(templateSpec, env) {
 
       return obj;
     },
+    // An empty object to use as replacement for null-contexts
+    nullContext: Object.seal({}),
 
     noop: env.VM.noop,
     compilerInfo: templateSpec.compiler
@@ -17320,7 +17399,7 @@ function template(templateSpec, env) {
         blockParams = templateSpec.useBlockParams ? [] : undefined;
     if (templateSpec.useDepths) {
       if (options.depths) {
-        depths = context !== options.depths[0] ? [context].concat(options.depths) : options.depths;
+        depths = context != options.depths[0] ? [context].concat(options.depths) : options.depths;
       } else {
         depths = [context];
       }
@@ -17369,7 +17448,7 @@ function wrapProgram(container, i, fn, data, declaredBlockParams, blockParams, d
     var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
     var currentDepths = depths;
-    if (depths && context !== depths[0]) {
+    if (depths && context != depths[0] && !(context === container.nullContext && depths[0] === null)) {
       currentDepths = [context].concat(depths);
     }
 
@@ -17400,6 +17479,8 @@ function resolvePartial(partial, context, options) {
 }
 
 function invokePartial(partial, context, options) {
+  // Use the current closure context to save the partial-block if this partial
+  var currentPartialBlock = options.data && options.data['partial-block'];
   options.partial = true;
   if (options.ids) {
     options.data.contextPath = options.ids[0] || options.data.contextPath;
@@ -17407,12 +17488,23 @@ function invokePartial(partial, context, options) {
 
   var partialBlock = undefined;
   if (options.fn && options.fn !== noop) {
-    options.data = _base.createFrame(options.data);
-    partialBlock = options.data['partial-block'] = options.fn;
+    (function () {
+      options.data = _base.createFrame(options.data);
+      // Wrapper function to get access to currentPartialBlock from the closure
+      var fn = options.fn;
+      partialBlock = options.data['partial-block'] = function partialBlockWrapper(context) {
+        var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
-    if (partialBlock.partials) {
-      options.partials = Utils.extend({}, options.partials, partialBlock.partials);
-    }
+        // Restore the partial-block from the closure for the execution of the block
+        // i.e. the part inside the block of the partial call.
+        options.data = _base.createFrame(options.data);
+        options.data['partial-block'] = currentPartialBlock;
+        return fn(context, options);
+      };
+      if (fn.partials) {
+        options.partials = Utils.extend({}, options.partials, fn.partials);
+      }
+    })();
   }
 
   if (partial === undefined && partialBlock) {
@@ -17618,7 +17710,7 @@ if (typeof require !== 'undefined' && require.extensions) {
   require.extensions['.hbs'] = extension;
 }
 
-},{"../dist/cjs/handlebars":13,"../dist/cjs/handlebars/compiler/printer":23,"fs":10}],43:[function(require,module,exports){
+},{"../dist/cjs/handlebars":13,"../dist/cjs/handlebars/compiler/printer":23,"fs":12}],43:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v2.2.4
  * http://jquery.com/
@@ -27664,8 +27756,94 @@ var substr = 'ab'.substr(-1) === 'b'
 }).call(this,require('_process'))
 },{"_process":45}],45:[function(require,module,exports){
 // shim for using process in browser
-
 var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -27690,7 +27868,7 @@ function drainQueue() {
     if (draining) {
         return;
     }
-    var timeout = setTimeout(cleanUpNextTick);
+    var timeout = runTimeout(cleanUpNextTick);
     draining = true;
 
     var len = queue.length;
@@ -27707,7 +27885,7 @@ function drainQueue() {
     }
     currentQueue = null;
     draining = false;
-    clearTimeout(timeout);
+    runClearTimeout(timeout);
 }
 
 process.nextTick = function (fun) {
@@ -27719,7 +27897,7 @@ process.nextTick = function (fun) {
     }
     queue.push(new Item(fun, args));
     if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
+        runTimeout(drainQueue);
     }
 };
 
@@ -27747,6 +27925,10 @@ process.off = noop;
 process.removeListener = noop;
 process.removeAllListeners = noop;
 process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');

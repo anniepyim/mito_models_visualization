@@ -41,7 +41,7 @@ module.exports = Backbone.View.extend({
         var val = $.trim($(e.target).val()),
             c = String.fromCharCode(e.keyCode),
             isWordCharacter = c.match(/\w/),
-            isBackspaceOrDelete = (event.keyCode == 8 || event.keyCode == 46);
+            isBackspaceOrDelete = (e.keyCode == 8 || e.keyCode == 46);
                 
         
         if(isWordCharacter || isBackspaceOrDelete){

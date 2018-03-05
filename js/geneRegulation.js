@@ -4,11 +4,11 @@ function geneRegulation(log2Limit, pvalLimit){
     pvalLimit = (pvalLimit !== undefined) ? pvalLimit :  0.05;
 
     function isUpRegulated(g){
-        return g.Log2FoldChange > log2Limit || (g.Log2FoldChange > 0 && g['p-value'] < 0.05);
+        return g.log2 > log2Limit || (g.log2 > 0 && g.pvalue < 0.05);
     }
 
     function isDownRegulated(g){
-        return g.Log2FoldChange < - log2Limit || (g.Log2FoldChange < 0 && g['p-value'] < 0.05);
+        return g.log2 < - log2Limit || (g.log2 < 0 && g.pvalue < 0.05);
     }
 
     function isNotRegulated(g){
