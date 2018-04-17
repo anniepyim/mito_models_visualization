@@ -482,7 +482,7 @@ function search(str){
     str = str.toLowerCase();
     
     var matchingGenes = d3.selectAll('.gene')
-                        .filter(function(d){ return d.gene.toLocaleLowerCase().match(str); })
+                        .filter(function(d){ return d.geneID.toLocaleLowerCase().match(str); })
                         .classed('search', true);
     
     matchingGenes.each(function(d){

@@ -55,7 +55,7 @@ module.exports = Backbone.View.extend({
             view = this;
 
         results = _.chain(results)
-                .sortBy('Name') //function(r){ return r.Name + r.Process; }
+                .sortBy('geneID') //function(r){ return r.Name + r.Process; }
                 .filter(function(r, i){ return i < 5; })
                 .value();
             

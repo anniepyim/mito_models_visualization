@@ -8,7 +8,7 @@ function dataFormatter(nodes, links){
     var data = {};
     
     data.nodes = _.map(nodes, function(n){
-        n.id = _.uniqueId(n.gene + '_');
+        n.id = _.uniqueId(n.geneID + '_');
         n.mutation = n.mutation.split(',')
         return n;
     });
@@ -63,10 +63,10 @@ function dataFormatter(nodes, links){
     // (many nodes can have same name)
     _.each(data.nodes, function(n){ 
         
-        if(_.isUndefined(nodeDic[n.gene])){
-            nodeDic[n.gene] = [];
+        if(_.isUndefined(nodeDic[n.geneID])){
+            nodeDic[n.geneID] = [];
         }
-        nodeDic[n.gene].push(n);
+        nodeDic[n.geneID].push(n);
     });
     
     // Create process dictionary

@@ -1,4 +1,4 @@
-(function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 // Required scripts
 var _ = require('underscore');
 var regulation = require('./geneRegulation')();
@@ -9,7 +9,7 @@ function dataFormatter(nodes, links){
     var data = {};
     
     data.nodes = _.map(nodes, function(n){
-        n.id = _.uniqueId(n.gene + '_');
+        n.id = _.uniqueId(n.geneID + '_');
         n.mutation = n.mutation.split(',')
         return n;
     });
@@ -64,10 +64,10 @@ function dataFormatter(nodes, links){
     // (many nodes can have same name)
     _.each(data.nodes, function(n){ 
         
-        if(_.isUndefined(nodeDic[n.gene])){
-            nodeDic[n.gene] = [];
+        if(_.isUndefined(nodeDic[n.geneID])){
+            nodeDic[n.geneID] = [];
         }
-        nodeDic[n.gene].push(n);
+        nodeDic[n.geneID].push(n);
     });
     
     // Create process dictionary
@@ -240,7 +240,7 @@ App.init = function(options){
 };
 
 module.exports = App;
-},{"./views/main":5,"./views/process.vis.js":6,"d3":11}],4:[function(require,module,exports){
+},{"./views/main":5,"./views/process.vis.js":6,"d3":12}],4:[function(require,module,exports){
 (function (global){
 var glob = ('undefined' === typeof window) ? global : window,
 
@@ -253,34 +253,76 @@ this["Templates"]["main"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main
 },"useData":true});
 
 this["Templates"]["result"] = Handlebars.template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
 
   return "<li class=\"list-group-item\"><span class=\"title\">"
-    + alias4(((helper = (helper = helpers.gene || (depth0 != null ? depth0.gene : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene","hash":{},"data":data}) : helper)))
+    + alias4(((helper = (helper = helpers.geneID || (depth0 != null ? depth0.geneID : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID","hash":{},"data":data}) : helper)))
     + "</span><br><span>"
     + alias4(((helper = (helper = helpers.process || (depth0 != null ? depth0.process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"process","hash":{},"data":data}) : helper)))
     + "</span></li>";
 },"useData":true});
 
 this["Templates"]["tooltip"] = Handlebars.template({"1":function(container,depth0,helpers,partials,data) {
+    var helper;
+
+  return "<div class=\"row infos\">\n<div class=\"col-md-5 miniTitle greyish\">\n    chr\n</div>                \n<div class=\"col-md-7 info\">"
+    + container.escapeExpression(((helper = (helper = helpers.chr || (depth0 != null ? depth0.chr : depth0)) != null ? helper : helpers.helperMissing),(typeof helper === "function" ? helper.call(depth0 != null ? depth0 : {},{"name":"chr","hash":{},"data":data}) : helper)))
+    + "</div>\n</div>\n";
+},"3":function(container,depth0,helpers,partials,data) {
+    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+
+  return "<div class=\"row infos\">\n<div class=\"col-md-5 miniTitle greyish\">\n    "
+    + alias4(((helper = (helper = helpers.geneID_a1_name || (depth0 != null ? depth0.geneID_a1_name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID_a1_name","hash":{},"data":data}) : helper)))
+    + "\n</div>                \n<div class=\"col-md-7 info\">"
+    + alias4(((helper = (helper = helpers.geneID_a1 || (depth0 != null ? depth0.geneID_a1 : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID_a1","hash":{},"data":data}) : helper)))
+    + "</div>\n";
+},"5":function(container,depth0,helpers,partials,data) {
+    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+
+  return "<div class=\"row infos\">\n<div class=\"col-md-5 miniTitle greyish\">\n    "
+    + alias4(((helper = (helper = helpers.geneID_a2_name || (depth0 != null ? depth0.geneID_a2_name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID_a2_name","hash":{},"data":data}) : helper)))
+    + "\n</div>                \n<div class=\"col-md-7 info\">"
+    + alias4(((helper = (helper = helpers.geneID_a2 || (depth0 != null ? depth0.geneID_a2 : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID_a2","hash":{},"data":data}) : helper)))
+    + "</div>\n";
+},"7":function(container,depth0,helpers,partials,data) {
+    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+
+  return "<div class=\"row infos\">\n\n<div class=\"col-md-5 miniTitle greyish\">\n    "
+    + alias4(((helper = (helper = helpers.geneID_a3_name || (depth0 != null ? depth0.geneID_a3_name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID_a3_name","hash":{},"data":data}) : helper)))
+    + "\n</div>                \n<div class=\"col-md-7 info\">"
+    + alias4(((helper = (helper = helpers.geneID_a3 || (depth0 != null ? depth0.geneID_a3 : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID_a3","hash":{},"data":data}) : helper)))
+    + "</div>\n</div>\n";
+},"9":function(container,depth0,helpers,partials,data) {
     return "    "
     + container.escapeExpression(container.lambda(depth0, depth0))
     + "<br>\n";
 },"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+    var stack1, helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
 
   return "<div class=\"col-md-12 title\">"
-    + alias4(((helper = (helper = helpers.gene || (depth0 != null ? depth0.gene : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene","hash":{},"data":data}) : helper)))
-    + "</div>\n\n<div class=\"col-md-12 process\">"
+    + alias4(((helper = (helper = helpers.geneID || (depth0 != null ? depth0.geneID : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"geneID","hash":{},"data":data}) : helper)))
+    + "</div>\n\n<div class=\"col-md-12 gene_name greyish\">("
+    + alias4(((helper = (helper = helpers.gene_name || (depth0 != null ? depth0.gene_name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene_name","hash":{},"data":data}) : helper)))
+    + ")</div>\n\n<div class=\"col-md-12 process\">"
     + alias4(((helper = (helper = helpers.process || (depth0 != null ? depth0.process : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"process","hash":{},"data":data}) : helper)))
-    + "</div>\n\n<div class=\"col-md-12 function\">"
+    + "</div>\n\n<div class=\"col-md-12 function greyish\">"
     + alias4(((helper = (helper = helpers.gene_function || (depth0 != null ? depth0.gene_function : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"gene_function","hash":{},"data":data}) : helper)))
-    + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Log2 FC\n</div>\n                \n<div class=\"col-md-6\">"
+    + "</div>\n\n"
+    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.chr : depth0),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "\n"
+    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.geneID_a1 : depth0),{"name":"if","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "</div>\n\n"
+    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.geneID_a2 : depth0),{"name":"if","hash":{},"fn":container.program(5, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "</div>\n\n"
+    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.geneID_a3 : depth0),{"name":"if","hash":{},"fn":container.program(7, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "\n<div class=\"row infos\">\n<div class=\"col-md-12 miniTitle sample\">"
+    + alias4(((helper = (helper = helpers.sampleID || (depth0 != null ? depth0.sampleID : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"sampleID","hash":{},"data":data}) : helper)))
+    + "</div>\n</div>\n\n<div id=\"wrapUp\">  \n\n<div class=\"row infos\">\n<div class=\"col-md-6 miniTitle\">\n    Log2 FC\n</div>\n   \n<div class=\"col-md-6 info\">"
     + alias4(((helper = (helper = helpers.log2 || (depth0 != null ? depth0.log2 : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"log2","hash":{},"data":data}) : helper)))
-    + "</div>\n\n<div class=\"col-md-6 miniTitle\">\n    Pvalue\n</div>\n                \n<div class=\"col-md-6\">"
+    + "</div>\n</div>\n\n<div class=\"row infos\">\n<div class=\"col-md-6 miniTitle\">\n    Pvalue\n</div>\n                \n<div class=\"col-md-6 info\">"
     + alias4(((helper = (helper = helpers.pvalue || (depth0 != null ? depth0.pvalue : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"pvalue","hash":{},"data":data}) : helper)))
-    + "</div>\n\n<div class=\"col-md-12 miniTitle\">\n    mutation\n</div>\n               \n<div class=\"col-md-12 mutation\">\n"
-    + ((stack1 = helpers.each.call(alias1,(depth0 != null ? depth0.mutation : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "</div>\n</div>\n\n</div>\n<div class=\"row infos\">\n<div class=\"col-md-12 miniTitle\">\n    mutation\n</div>\n</div>\n<div class=\"col-md-12 mutation\">\n"
+    + ((stack1 = helpers.each.call(alias1,(depth0 != null ? depth0.mutation : depth0),{"name":"each","hash":{},"fn":container.program(9, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
     + "\n</div>";
 },"useData":true});
 
@@ -344,7 +386,7 @@ module.exports = Backbone.View.extend({
             view = this;
 
         results = _.chain(results)
-                .sortBy('Name') //function(r){ return r.Name + r.Process; }
+                .sortBy('geneID') //function(r){ return r.Name + r.Process; }
                 .filter(function(r, i){ return i < 5; })
                 .value();
             
@@ -846,7 +888,7 @@ function search(str){
     str = str.toLowerCase();
     
     var matchingGenes = d3.selectAll('.gene')
-                        .filter(function(d){ return d.gene.toLocaleLowerCase().match(str); })
+                        .filter(function(d){ return d.geneID.toLocaleLowerCase().match(str); })
                         .classed('search', true);
     
     matchingGenes.each(function(d){
@@ -898,10 +940,10 @@ require('d3-tip')(d3);
 require('underscore'); // bootstrap
 
 App = require('./js/main');
-},{"./js/main":3,"backbone":9,"d3":11,"d3-tip":10,"handlebars":42,"jquery":43,"underscore":57}],8:[function(require,module,exports){
+},{"./js/main":3,"backbone":9,"d3":12,"d3-tip":11,"handlebars":42,"jquery":43,"underscore":57}],8:[function(require,module,exports){
 (function (process,__filename){
 /** vim: et:ts=4:sw=4:sts=4
- * @license amdefine 1.0.1 Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
+ * @license amdefine 1.0.0 Copyright (c) 2011-2015, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/amdefine for details
  */
@@ -3128,6 +3170,8 @@ module.exports = amdefine;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"jquery":43,"underscore":57}],10:[function(require,module,exports){
+
+},{}],11:[function(require,module,exports){
 // d3.tip
 // Copyright (c) 2013 Justin Palmer
 //
@@ -3453,7 +3497,7 @@ module.exports = amdefine;
 
 }));
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.17"
@@ -13008,8 +13052,6 @@ module.exports = amdefine;
   });
   if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
 }();
-},{}],12:[function(require,module,exports){
-
 },{}],13:[function(require,module,exports){
 'use strict';
 
@@ -13168,7 +13210,7 @@ var _logger = require('./logger');
 
 var _logger2 = _interopRequireDefault(_logger);
 
-var VERSION = '4.0.11';
+var VERSION = '4.0.5';
 exports.VERSION = VERSION;
 var COMPILER_REVISION = 7;
 
@@ -13591,7 +13633,7 @@ Compiler.prototype = {
       for (var _name in knownHelpers) {
         /* istanbul ignore else */
         if (_name in knownHelpers) {
-          this.options.knownHelpers[_name] = knownHelpers[_name];
+          options.knownHelpers[_name] = knownHelpers[_name];
         }
       }
     }
@@ -14006,7 +14048,6 @@ function compile(input, options, env) {
     throw new _exception2['default']('You must pass a string or Handlebars AST to Handlebars.compile. You passed ' + input);
   }
 
-  options = _utils.extend({}, options);
   if (!('data' in options)) {
     options.data = true;
   }
@@ -15096,11 +15137,11 @@ JavaScriptCompiler.prototype = {
       child = children[i];
       compiler = new this.compiler(); // eslint-disable-line new-cap
 
-      var existing = this.matchExistingProgram(child);
+      var index = this.matchExistingProgram(child);
 
-      if (existing == null) {
+      if (index == null) {
         this.context.programs.push(''); // Placeholder to prevent name conflicts for nested children
-        var index = this.context.programs.length;
+        index = this.context.programs.length;
         child.index = index;
         child.name = 'program' + index;
         this.context.programs[index] = compiler.compile(child, options, this.context, !this.precompile);
@@ -15109,14 +15150,12 @@ JavaScriptCompiler.prototype = {
 
         this.useDepths = this.useDepths || compiler.useDepths;
         this.useBlockParams = this.useBlockParams || compiler.useBlockParams;
-        child.useDepths = this.useDepths;
-        child.useBlockParams = this.useBlockParams;
       } else {
-        child.index = existing.index;
-        child.name = 'program' + existing.index;
+        child.index = index;
+        child.name = 'program' + index;
 
-        this.useDepths = this.useDepths || existing.useDepths;
-        this.useBlockParams = this.useBlockParams || existing.useBlockParams;
+        this.useDepths = this.useDepths || child.useDepths;
+        this.useBlockParams = this.useBlockParams || child.useBlockParams;
       }
     }
   },
@@ -15124,7 +15163,7 @@ JavaScriptCompiler.prototype = {
     for (var i = 0, len = this.context.environments.length; i < len; i++) {
       var environment = this.context.environments[i];
       if (environment && environment.equals(child)) {
-        return environment;
+        return i;
       }
     }
   },
@@ -15306,7 +15345,7 @@ JavaScriptCompiler.prototype = {
     var params = [],
         paramsInit = this.setupHelperArgs(name, paramSize, params, blockHelper);
     var foundHelper = this.nameLookup('helpers', name, 'helper'),
-        callContext = this.aliasable(this.contextName(0) + ' != null ? ' + this.contextName(0) + ' : (container.nullContext || {})');
+        callContext = this.aliasable(this.contextName(0) + ' != null ? ' + this.contextName(0) + ' : {}');
 
     return {
       params: params,
@@ -15440,11 +15479,10 @@ module.exports = exports['default'];
 
 
 },{"../base":15,"../exception":28,"../utils":41,"./code-gen":18}],22:[function(require,module,exports){
-// File ignored in coverage tests via setting in .istanbul.yml
+/* istanbul ignore next */
 /* Jison generated parser */
 "use strict";
 
-exports.__esModule = true;
 var handlebars = (function () {
     var parser = { trace: function trace() {},
         yy: {},
@@ -16176,8 +16214,8 @@ var handlebars = (function () {
         this.yy = {};
     }Parser.prototype = parser;parser.Parser = Parser;
     return new Parser();
-})();exports["default"] = handlebars;
-module.exports = exports["default"];
+})();exports.__esModule = true;
+exports['default'] = handlebars;
 
 
 },{}],23:[function(require,module,exports){
@@ -16812,23 +16850,9 @@ function Exception(message, node) {
     Error.captureStackTrace(this, Exception);
   }
 
-  try {
-    if (loc) {
-      this.lineNumber = line;
-
-      // Work around issue under safari where we can't directly set the column value
-      /* istanbul ignore next */
-      if (Object.defineProperty) {
-        Object.defineProperty(this, 'column', {
-          value: column,
-          enumerable: true
-        });
-      } else {
-        this.column = column;
-      }
-    }
-  } catch (nop) {
-    /* Ignore if the browser is very particular */
+  if (loc) {
+    this.lineNumber = line;
+    this.column = column;
   }
 }
 
@@ -17379,8 +17403,6 @@ function template(templateSpec, env) {
 
       return obj;
     },
-    // An empty object to use as replacement for null-contexts
-    nullContext: Object.seal({}),
 
     noop: env.VM.noop,
     compilerInfo: templateSpec.compiler
@@ -17399,7 +17421,7 @@ function template(templateSpec, env) {
         blockParams = templateSpec.useBlockParams ? [] : undefined;
     if (templateSpec.useDepths) {
       if (options.depths) {
-        depths = context != options.depths[0] ? [context].concat(options.depths) : options.depths;
+        depths = context !== options.depths[0] ? [context].concat(options.depths) : options.depths;
       } else {
         depths = [context];
       }
@@ -17448,7 +17470,7 @@ function wrapProgram(container, i, fn, data, declaredBlockParams, blockParams, d
     var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
     var currentDepths = depths;
-    if (depths && context != depths[0] && !(context === container.nullContext && depths[0] === null)) {
+    if (depths && context !== depths[0]) {
       currentDepths = [context].concat(depths);
     }
 
@@ -17479,8 +17501,6 @@ function resolvePartial(partial, context, options) {
 }
 
 function invokePartial(partial, context, options) {
-  // Use the current closure context to save the partial-block if this partial
-  var currentPartialBlock = options.data && options.data['partial-block'];
   options.partial = true;
   if (options.ids) {
     options.data.contextPath = options.ids[0] || options.data.contextPath;
@@ -17488,23 +17508,12 @@ function invokePartial(partial, context, options) {
 
   var partialBlock = undefined;
   if (options.fn && options.fn !== noop) {
-    (function () {
-      options.data = _base.createFrame(options.data);
-      // Wrapper function to get access to currentPartialBlock from the closure
-      var fn = options.fn;
-      partialBlock = options.data['partial-block'] = function partialBlockWrapper(context) {
-        var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+    options.data = _base.createFrame(options.data);
+    partialBlock = options.data['partial-block'] = options.fn;
 
-        // Restore the partial-block from the closure for the execution of the block
-        // i.e. the part inside the block of the partial call.
-        options.data = _base.createFrame(options.data);
-        options.data['partial-block'] = currentPartialBlock;
-        return fn(context, options);
-      };
-      if (fn.partials) {
-        options.partials = Utils.extend({}, options.partials, fn.partials);
-      }
-    })();
+    if (partialBlock.partials) {
+      options.partials = Utils.extend({}, options.partials, partialBlock.partials);
+    }
   }
 
   if (partial === undefined && partialBlock) {
@@ -17710,7 +17719,7 @@ if (typeof require !== 'undefined' && require.extensions) {
   require.extensions['.hbs'] = extension;
 }
 
-},{"../dist/cjs/handlebars":13,"../dist/cjs/handlebars/compiler/printer":23,"fs":12}],43:[function(require,module,exports){
+},{"../dist/cjs/handlebars":13,"../dist/cjs/handlebars/compiler/printer":23,"fs":10}],43:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v2.2.4
  * http://jquery.com/
@@ -27766,40 +27775,25 @@ var process = module.exports = {};
 var cachedSetTimeout;
 var cachedClearTimeout;
 
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
 (function () {
     try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
+        cachedSetTimeout = setTimeout;
     } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
+        cachedSetTimeout = function () {
+            throw new Error('setTimeout is not defined');
+        }
     }
     try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
+        cachedClearTimeout = clearTimeout;
     } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
+        cachedClearTimeout = function () {
+            throw new Error('clearTimeout is not defined');
+        }
     }
 } ())
 function runTimeout(fun) {
     if (cachedSetTimeout === setTimeout) {
         //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
         return setTimeout(fun, 0);
     }
     try {
@@ -27820,11 +27814,6 @@ function runTimeout(fun) {
 function runClearTimeout(marker) {
     if (cachedClearTimeout === clearTimeout) {
         //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
         return clearTimeout(marker);
     }
     try {
@@ -27925,10 +27914,6 @@ process.off = noop;
 process.removeListener = noop;
 process.removeAllListeners = noop;
 process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
